@@ -12,7 +12,7 @@ export default function TaskBoard() {
   const [tasks, setTasks] = useState<{ id: number; title: string; status: string; due_date?: string }[]>([]);
   const [newTask, setNewTask] = useState("");
   const [dueDate, setDueDate] = useState(getCurrentThaiTime()); 
-  const [name, setName] = useState("Sirapat");
+  const [name, setName] = useState("User");
   const [searchQuery, setSearchQuery] = useState(""); 
 
   useEffect(() => {
@@ -28,7 +28,8 @@ export default function TaskBoard() {
 
   const fetchTasks = async () => {
     try {
-      const res = await fetch('/api/tasks');
+      const userId = localStorage.getItem("userId"); // ดึง ID ผู้ใช้ที่ Login อยู่
+      const res = await fetch(`/api/tasks?userId=${userId}`); // ส่งไปขอเฉพาะงานของตัวเอง
       const data = await res.json();
       if (Array.isArray(data)) setTasks(data);
     } catch (error) {
@@ -40,15 +41,21 @@ export default function TaskBoard() {
     e.preventDefault();
     if (!newTask.trim()) return;
     
+    const userId = localStorage.getItem("userId");
     const response = await fetch('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newTask, due_date: dueDate }),
+      body: JSON.stringify({ 
+        title: newTask, 
+        due_date: dueDate, 
+        user_id: userId // ส่ง ID เจ้าของงานไปบันทึก
+      }),
     });
     
     if (response.ok) {
       const savedTask = await response.json();
-      setTasks([savedTask, ...tasks]);
+      // อัปเดต List งานโดยการดึงข้อมูลใหม่เพื่อให้ชัวร์เรื่องลำดับ
+      fetchTasks();
       setNewTask("");
       setDueDate(getCurrentThaiTime()); 
     }
@@ -91,7 +98,7 @@ export default function TaskBoard() {
 
   return (
     <div className="flex min-h-screen bg-[#FFF5EE]">
-      {/* Sidebar - เอาปุ่ม Logout ออกแล้ว */}
+      {/* Sidebar - เอาปุ่ม Logout ออกแล้ว (จะไปอยู่ที่หน้า Settings แทน) */}
       <aside className="w-72 bg-[#FF8C42] p-8 text-white flex flex-col justify-between shadow-xl fixed h-full">
         <div>
           <div className="text-2xl font-black mb-12 italic tracking-tighter">✔️ TaskBoardApp</div>
@@ -103,6 +110,7 @@ export default function TaskBoard() {
         </div>
 
         <div className="space-y-4">
+          {/* ส่วนแสดงโปรไฟล์ด้านล่าง Sidebar */}
           <div className="bg-white/10 p-4 rounded-[25px] flex items-center gap-3 border border-white/10">
             <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center text-[#FF8C42] font-black text-xl uppercase shadow-inner">
               {name[0]}
@@ -137,7 +145,7 @@ export default function TaskBoard() {
             type="text" 
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
-            placeholder="เพิ่มงานใหม่ที่คุณต้องทำวันนี้..." 
+            placeholder="เพิ่มงานใหม่ของคุณ..." 
             className="w-full p-5 bg-orange-50 rounded-[25px] outline-none focus:ring-2 focus:ring-[#FF8C42] font-bold text-gray-800"
           />
           <div className="flex gap-4">

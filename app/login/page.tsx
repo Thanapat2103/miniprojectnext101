@@ -23,12 +23,13 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok) {
-        // 1. เก็บสถานะว่า Login แล้วลงในเครื่อง
+        // เก็บข้อมูลลง localStorage เพื่อใช้แยกงานของแต่ละคน
         localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("username", data.username); // เก็บชื่อจริงจาก DB
+        localStorage.setItem("userId", data.id); // สำคัญมาก: เก็บ ID จาก DB
+        localStorage.setItem("username", data.username);
         
         alert("ยินดีต้อนรับเข้าสู่ระบบ! 🚀");
-        router.push("/"); // ส่งไปหน้า Dashboard
+        router.push("/taskboard"); // ส่งไปหน้า Task Board
       } else {
         alert(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
       }
@@ -46,14 +47,14 @@ export default function LoginPage() {
         className="bg-white p-12 rounded-[40px] shadow-2xl text-center w-full max-w-md border border-orange-50"
       >
         <div className="mb-8">
-          <div className="text-5xl mb-4">🔐</div>
+          <div className="text-5xl mb-4 text-[#FF8C42]">🔐</div>
           <h1 className="text-3xl font-black text-gray-800 tracking-tight">Login</h1>
           <p className="text-gray-400 mt-2 font-medium">เข้าสู่ระบบเพื่อจัดการงานของคุณ</p>
         </div>
 
         <div className="space-y-4 text-left">
           <div>
-            <label className="block text-xs font-black text-gray-400 uppercase ml-5 mb-2 tracking-widest">Username</label>
+            <label className="block text-xs font-black text-gray-400 uppercase ml-5 mb-2 tracking-widest text-[#FF8C42]">Username</label>
             <input 
               type="text" 
               placeholder="ชื่อผู้ใช้งานของคุณ..." 
@@ -64,7 +65,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-black text-gray-400 uppercase ml-5 mb-2 tracking-widest">Password</label>
+            <label className="block text-xs font-black text-gray-400 uppercase ml-5 mb-2 tracking-widest text-[#FF8C42]">Password</label>
             <input 
               type="password" 
               placeholder="รหัสผ่านของคุณ..." 
@@ -84,7 +85,7 @@ export default function LoginPage() {
         </button>
 
         <p className="mt-6 text-sm font-bold text-gray-400">
-          ยังไม่มีบัญชี? <Link href="/register" className="text-[#FF8C42] hover:underline">สมัครสมาชิกที่นี่</Link>
+          ยังไม่มีบัญชี? <Link href="/register" className="text-[#FF8C42] hover:underline transition-all">สมัครสมาชิกที่นี่</Link>
         </p>
       </form>
     </div>
