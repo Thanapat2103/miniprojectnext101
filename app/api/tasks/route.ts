@@ -1,37 +1,34 @@
 import { NextResponse } from 'next/server';
-import db from '@/app/lib/db'; // เรียกใช้ตัวเชื่อมต่อ SQLite ที่เราสร้างไว้ใน lib/db.ts
+import db from '@/app/lib/db'; 
 
-// 1. ดึงข้อมูลงานทั้งหมด (GET)
-// ฟังก์ชันนี้จะทำงานตอนที่หน้า Task Board โหลดขึ้นมา
+// 1. ดึงงาน (ต้องเอา due_date ออกมาด้วย)
 export async function GET() {
   try {
-    // ดึงงานทั้งหมด เรียงจากใหม่ไปเก่า
     const tasks = db.prepare('SELECT * FROM tasks ORDER BY id DESC').all();
     return NextResponse.json(tasks);
   } catch (error) {
-    console.error("GET Error:", error);
     return NextResponse.json({ error: "ดึงข้อมูลล้มเหลว" }, { status: 500 });
   }
 }
 
-// 2. เพิ่มงานใหม่ (POST)
-// ฟังก์ชันนี้จะทำงานตอนที่คุณกดปุ่ม "+ Add Task"
+// 2. เพิ่มงาน (ต้องเพิ่มช่องสำหรับรับและบันทึก due_date)
 export async function POST(req: Request) {
   try {
-    const { title } = await req.json();
+    const { title, due_date } = await req.json();
     
     if (!title) {
       return NextResponse.json({ error: "กรุณาใส่ชื่องาน" }, { status: 400 });
     }
 
-    const stmt = db.prepare('INSERT INTO tasks (title, status) VALUES (?, ?)');
-    const info = stmt.run(title, 'To Do');
+    // แก้ไข INSERT ให้บันทึก 3 ค่า: title, status, และ due_date
+    const stmt = db.prepare('INSERT INTO tasks (title, status, due_date) VALUES (?, ?, ?)');
+    const info = stmt.run(title, 'To Do', due_date);
     
-    // ส่งข้อมูลที่เพิ่งบันทึกสำเร็จกลับไปให้หน้าจอแสดงผล
     return NextResponse.json({ 
       id: info.lastInsertRowid, 
       title, 
-      status: 'To Do' 
+      status: 'To Do',
+      due_date: due_date 
     });
   } catch (error) {
     console.error("POST Error:", error);
@@ -39,32 +36,26 @@ export async function POST(req: Request) {
   }
 }
 
-// 3. อัปเดตสถานะ Done / To Do (PATCH)
-// ฟังก์ชันนี้ทำงานตอนกดปุ่มเปลี่ยนสถานะงาน
+// 3. แก้ไขสถานะ
 export async function PATCH(req: Request) {
   try {
     const { id, status } = await req.json();
     const stmt = db.prepare('UPDATE tasks SET status = ? WHERE id = ?');
     stmt.run(status, id);
-    
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("PATCH Error:", error);
-    return NextResponse.json({ error: "อัปเดตสถานะล้มเหลว" }, { status: 500 });
+    return NextResponse.json({ error: "อัปเดตล้มเหลว" }, { status: 500 });
   }
 }
 
-// 4. ลบงาน (DELETE)
-// ฟังก์ชันนี้ทำงานตอนกดปุ่มกากบาท (X)
+// 4. ลบงาน
 export async function DELETE(req: Request) {
   try {
     const { id } = await req.json();
     const stmt = db.prepare('DELETE FROM tasks WHERE id = ?');
     stmt.run(id);
-    
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE Error:", error);
     return NextResponse.json({ error: "ลบงานล้มเหลว" }, { status: 500 });
   }
 }

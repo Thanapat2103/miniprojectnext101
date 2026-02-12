@@ -2,27 +2,28 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+// ต้องติดตั้ง npm install recharts ก่อนใช้งาน
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 export default function Dashboard() {
-  const [name, setName] = useState("User");
-  const [stats, setStats] = useState({ todo: 0, done: 0 });
+  const [name, setName] = useState("Sirapat");
+  const [stats, setStats] = useState({ todo: 0, inProgress: 0, done: 0 });
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState(""); // ระบบ Search
   const router = useRouter();
 
   useEffect(() => {
-    // 1. ระบบ Login Check
+    // 1. ระบบเช็ค Login: ถ้าไม่มีค่าใน localStorage ให้เด้งไปหน้า Register ทันที
     const auth = localStorage.getItem("isLoggedIn");
     if (!auth) {
-      router.push("/login");
+      router.push("/register"); 
       return;
     }
 
-    // 2. ดึงชื่อที่ตั้งไว้จากหน้า Settings (ถ้ามี)
+    // 2. ดึงชื่อผู้ใช้งานที่บันทึกไว้
     const savedName = localStorage.getItem("username");
     if (savedName) setName(savedName);
 
-    // 3. ดึงตัวเลขจริงจาก API Stats
+    // 3. ดึงข้อมูลสถิติจาก API มาแสดงใน Card และ กราฟ
     const fetchStats = async () => {
       try {
         const res = await fetch('/api/stats');
@@ -30,11 +31,12 @@ export default function Dashboard() {
           const data = await res.json();
           setStats({
             todo: data.todo || 0,
+            inProgress: data.inProgress || 0,
             done: data.done || 0
           });
         }
       } catch (error) {
-        console.error("Failed to fetch dashboard stats:", error);
+        console.error("Error fetching stats:", error);
       } finally {
         setLoading(false);
       }
@@ -43,11 +45,14 @@ export default function Dashboard() {
     fetchStats();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    router.push("/login");
-  };
+  // ข้อมูลสำหรับวาดกราฟวงกลม
+  const chartData = [
+    { name: 'To Do', value: stats.todo, color: '#FF8C42' },
+    { name: 'In Progress', value: stats.inProgress, color: '#3B82F6' },
+    { name: 'Done', value: stats.done, color: '#4ADE80' },
+  ];
 
+  // ถ้ายังโหลดไม่เสร็จ ให้แสดง Loading เพื่อป้องกันหน้าจอขาว
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-[#FFF5EE]">
       <div className="animate-bounce font-black text-[#FF8C42] text-xl">🚀 กำลังโหลดข้อมูล...</div>
@@ -73,86 +78,67 @@ export default function Dashboard() {
           </nav>
         </div>
         
-        <div className="space-y-4">
-          <div className="bg-white/10 p-4 rounded-[25px] flex items-center gap-3 border border-white/10">
-            <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center text-[#FF8C42] font-bold text-xl uppercase shadow-inner">
-              {name[0]}
-            </div>
-            <div className="overflow-hidden">
-              <p className="font-bold text-sm truncate">{name}</p>
-              <p className="text-xs text-orange-100/70">Online Now</p>
-            </div>
+        <div className="bg-white/10 p-4 rounded-[25px] flex items-center gap-3 border border-white/10">
+          <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center text-[#FF8C42] font-bold text-xl uppercase shadow-inner">
+            {name[0]}
           </div>
-          <button 
-            onClick={handleLogout}
-            className="w-full py-3 rounded-2xl bg-black/10 hover:bg-black/20 text-xs font-black uppercase tracking-widest transition-all"
-          >
-            🚪 Logout
-          </button>
+          <div className="overflow-hidden">
+            <p className="font-bold text-sm truncate">{name}</p>
+            <p className="text-xs text-orange-100/70">Online Now</p>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-12">
-        <header className="flex justify-between items-center mb-10">
-          <div>
-            <h1 className="text-4xl font-black text-gray-800 tracking-tight">Dashboard</h1>
-            <p className="text-gray-500 mt-1 font-medium italic">ยินดีต้อนรับกลับมา, {name} ✨</p>
-          </div>
-          
-          {/* ระบบ Search Tasks */}
-          <div className="relative">
-            <input 
-              type="text"
-              placeholder="🔍 Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white p-4 px-6 rounded-full shadow-sm text-gray-700 border border-orange-50 w-80 outline-none focus:ring-2 focus:ring-[#FF8C42] transition-all"
-            />
-            {searchQuery && (
-              <div className="absolute top-16 w-full bg-white rounded-2xl shadow-xl border border-orange-50 p-4 z-10 text-sm font-bold text-gray-400">
-                กำลังค้นหา: "{searchQuery}"... 
-                <p className="text-[10px] font-normal italic mt-1 text-gray-400">*ระบบจะกรองในหน้า Task Board</p>
-              </div>
-            )}
-          </div>
+      <main className="flex-1 p-12 overflow-y-auto">
+        <header className="mb-10">
+          <h1 className="text-4xl font-black text-gray-800 tracking-tight">Dashboard</h1>
+          <p className="text-gray-500 mt-1 font-medium italic">ยินดีต้อนรับกลับมา, {name} ✨</p>
         </header>
 
-        {/* Status Cards */}
-        <div className="grid grid-cols-3 gap-8">
-          <div className="bg-white p-10 rounded-[40px] shadow-sm border-b-[10px] border-[#FF8C42] hover:translate-y-[-5px] transition-all group">
-            <p className="text-[#FF8C42] font-black text-xs uppercase tracking-widest">To Do</p>
-            <p className="text-7xl font-black mt-3 text-gray-800 group-hover:scale-110 transition-transform origin-left">
-              {stats.todo}
-            </p>
-          </div>
-          
-          <div className="bg-white p-10 rounded-[40px] shadow-sm border-b-[10px] border-green-400 hover:translate-y-[-5px] transition-all group">
-            <p className="text-green-500 font-black text-xs uppercase tracking-widest">Done</p>
-            <p className="text-7xl font-black mt-3 text-gray-800 group-hover:scale-110 transition-transform origin-left">
-              {stats.done}
-            </p>
-          </div>
-
-          <div className="bg-white p-10 rounded-[40px] shadow-sm border-b-[10px] border-orange-200 hover:translate-y-[-5px] transition-all group">
-            <p className="text-orange-300 font-black text-xs uppercase tracking-widest">Total Tasks</p>
-            <p className="text-7xl font-black mt-3 text-gray-800 group-hover:scale-110 transition-transform origin-left">
-              {stats.todo + stats.done}
-            </p>
-          </div>
+        {/* Status Cards 4 อันตามโจทย์ (To Do, In Progress, Done, Total) */}
+        <div className="grid grid-cols-4 gap-6 mb-10">
+          <StatCard title="To Do" value={stats.todo} color="border-[#FF8C42]" />
+          <StatCard title="In Progress" value={stats.inProgress} color="border-blue-500" />
+          <StatCard title="Done" value={stats.done} color="border-green-400" />
+          <StatCard title="Total Tasks" value={stats.todo + stats.inProgress + stats.done} color="border-gray-800" />
         </div>
 
-        {/* Shortcut Section */}
-        <div className="mt-12 bg-[#FF8C42]/5 p-10 rounded-[40px] border-2 border-dashed border-[#FF8C42]/20 flex justify-between items-center">
-          <div>
-            <h3 className="text-xl font-bold text-gray-800">พร้อมจะลุยงานต่อหรือยัง?</h3>
-            <p className="text-gray-500">คุณสามารถเพิ่มงานใหม่ หรือจัดการงานเดิมได้ที่ Task Board</p>
+        {/* กราฟวงกลมแสดงสัดส่วนงาน (Pie Chart) */}
+        <div className="bg-white p-10 rounded-[40px] shadow-sm border border-orange-50 h-[450px] flex flex-col items-center">
+          <h3 className="text-xl font-bold mb-5 text-gray-700">Task Overview (100%)</h3>
+          <div className="w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie 
+                  data={chartData} 
+                  innerRadius={80} 
+                  outerRadius={120} 
+                  paddingAngle={8} 
+                  dataKey="value"
+                  animationDuration={1000}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36}/>
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <Link href="/taskboard" className="bg-[#FF8C42] text-white px-10 py-5 rounded-[25px] font-black text-lg hover:shadow-xl hover:bg-[#e67635] transition-all active:scale-95 shadow-lg shadow-orange-100">
-            Go to Task Board →
-          </Link>
         </div>
       </main>
+    </div>
+  );
+}
+
+// Component ย่อยสำหรับ Card สถิติ
+function StatCard({ title, value, color }: { title: string; value: number; color: string }) {
+  return (
+    <div className={`bg-white p-8 rounded-[35px] shadow-sm border-b-[8px] ${color} hover:translate-y-[-5px] transition-all`}>
+      <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{title}</p>
+      <p className="text-5xl font-black mt-2 text-gray-800">{value}</p>
     </div>
   );
 }
