@@ -1,27 +1,7 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
-const db = new Database(path.join(process.cwd(), 'database.sqlite'));
+// ค่าเหล่านี้จะถูกดึงจาก Environment Variables ใน Vercel
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// เปิดใช้งาน Foreign Key Support
-db.pragma('foreign_keys = ON');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    status TEXT CHECK( status IN ('To Do','In Progress','Done') ) DEFAULT 'To Do',
-    due_date TEXT,
-    user_id INTEGER,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-  );
-`);
-
-export default db;
+export const supabase = createClient(supabaseUrl, supabaseKey);

@@ -130,7 +130,7 @@ export default function Settings() {
               onClick={handleLogout}
               className="w-full bg-gray-50 text-red-500 py-4 rounded-2xl font-black text-lg hover:bg-red-50 transition-all active:scale-95 border border-red-100 flex items-center justify-center gap-2"
             >
-              🚪 Log Out from System
+              🚪 Log Out 
             </button>
           </div>
         </div>

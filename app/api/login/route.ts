@@ -1,21 +1,27 @@
 import { NextResponse } from 'next/server';
-import db from '@/app/lib/db';
+import { supabase } from '@/app/lib/db';
 
 export async function POST(req: Request) {
   try {
     const { username, password } = await req.json();
-    const user = db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(username, password) as any;
 
-    if (user) {
-      return NextResponse.json({ 
-        success: true, 
-        id: user.id, // ส่ง ID กลับไปเก็บที่ localStorage
-        username: user.username 
-      });
-    } else {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', password)
+      .single();
+
+    if (error || !user) {
       return NextResponse.json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
     }
+
+    return NextResponse.json({ 
+      success: true, 
+      id: user.id, 
+      username: user.username 
+    });
   } catch (error) {
-    return NextResponse.json({ error: "เกิดข้อผิดพลาด" }, { status: 500 });
+    return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
 }
