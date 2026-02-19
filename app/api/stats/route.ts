@@ -1,22 +1,41 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/app/lib/db';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // 1. นับ To Do
-    const todo = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'To Do'").get() as { count: number };
-    
-    // 2. นับ In Progress (เช็คตัวสะกด เว้นวรรค และตัวใหญ่ตัวเล็กให้ตรงกับ DB)
-    const inProgress = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'In Progress'").get() as { count: number };
-    
-    // 3. นับ Done
-    const done = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'Done'").get() as { count: number };
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
 
-    // ส่งค่ากลับไปให้หน้า Dashboard (Frontend)
+    // ถ้าไม่มี userId ส่งมา ให้คืนค่า 0 ทั้งหมดเพื่อป้องกัน Error
+    if (!userId) {
+      return NextResponse.json({ todo: 0, inProgress: 0, done: 0 });
+    }
+
+    // 1. นับ To Do ด้วย Supabase
+    const { count: todoCount } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'To Do');
+
+    // 2. นับ In Progress ด้วย Supabase
+    const { count: inProgressCount } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'In Progress');
+
+    // 3. นับ Done ด้วย Supabase
+    const { count: doneCount } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'Done');
+
     return NextResponse.json({
-      todo: todo?.count || 0,
-      inProgress: inProgress?.count || 0,
-      done: done?.count || 0
+      todo: todoCount || 0,
+      inProgress: inProgressCount || 0,
+      done: doneCount || 0
     });
   } catch (error) {
     console.error("Stats API Error:", error);
