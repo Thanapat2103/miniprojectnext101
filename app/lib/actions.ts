@@ -1,6 +1,6 @@
 'use server';
 
-import db from './db';
+import { supabase } from './db';
 import { revalidatePath } from 'next/cache';
 
 export async function createTask(formData: FormData) {
